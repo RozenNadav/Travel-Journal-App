@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login | Travel Journal</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to right, #6dd5fa, #2980b9);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .auth-container {
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      width: 350px;
+      text-align: center;
+    }
+
+    h2 {
+      margin-bottom: 1rem;
+      color: #333;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+
+    input {
+      padding: 0.8rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+
+    button {
+      padding: 0.8rem;
+      background: #2980b9;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    button:hover {
+      background: #1f6694;
+    }
+
+    .toggle {
+      margin-top: 1rem;
+      font-size: 0.9rem;
+    }
+
+    .toggle a {
+      color: #2980b9;
+      cursor: pointer;
+      text-decoration: none;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-container">
+    <h2 id="form-title">Sign In</h2>
+    <form id="auth-form">
+      <input type="email" placeholder="Email" required />
+      <input type="password" placeholder="Password" required />
+      <div id="extra-field" style="display:none;">
+        <input type="text" placeholder="Username" />
+      </div>
+      <button type="submit">Submit</button>
+    </form>
+    <div class="toggle">
+      <span id="toggle-text">Don't have an account? </span>
+      <a id="toggle-link">Sign Up</a>
+    </div>
+  </div>
+
+  <script>
+    const toggleLink = document.getElementById('toggle-link');
+    const formTitle = document.getElementById('form-title');
+    const toggleText = document.getElementById('toggle-text');
+    const extraField = document.getElementById('extra-field');
+    let isSignIn = true;
+
+    toggleLink.addEventListener('click', () => {
+      isSignIn = !isSignIn;
+      if (isSignIn) {
+        formTitle.textContent = "Sign In";
+        toggleText.textContent = "Don't have an account? ";
+        toggleLink.textContent = "Sign Up";
+        extraField.style.display = "none";
+      } else {
+        formTitle.textContent = "Sign Up";
+        toggleText.textContent = "Already have an account? ";
+        toggleLink.textContent = "Sign In";
+        extraField.style.display = "block";
+      }
+    });
+  </script>
+</body>
+</html>
