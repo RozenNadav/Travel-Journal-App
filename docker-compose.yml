@@ -1,0 +1,55 @@
+version: '3.8'
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: travel_journal_frontend
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    depends_on:
+      - backend
+    networks:
+      - travel_journal_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: travel_journal_backend
+    ports:
+      - "${BACKEND_PORT:-5001}:5001"
+    depends_on:
+      - postgres
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: travel_journal
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGSSL: "false"
+      NODE_ENV: development
+    networks:
+      - travel_journal_network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: travel_journal_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: travel_journal
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - travel_journal_network
+
+volumes:
+  postgres_data:
+
+networks:
+  travel_journal_network:
+    driver: bridge
