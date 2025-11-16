@@ -1,40 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Edit, Trash2, Sparkles, MapPin, Calendar, Users, Star } from "lucide-react";
 import Header from "@/components/Header";
+import { API_BASE_URL } from "@/config";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import JournalEntryForm from '@/components/JournalEntryForm';
 
-// Mock journal data
-const initialJournals = [
-  {
-    id: '1',
-    name: 'Summer in Paris',
-    locations: ['Paris, France', 'Versailles, France'],
-    startDate: '2025-06-15',
-    endDate: '2025-06-30',
-    summary: 'An unforgettable journey through the City of Light.',
-    aiSummary: 'This 15-day adventure through Paris and Versailles was a remarkable journey of discovery. The traveler explored the iconic landmarks of the French capital, from the Eiffel Tower to the Louvre, while also experiencing the grandeur of Versailles Palace. The trip was filled with cultural immersion, culinary delights, and romantic moments along the Seine. The blend of historic architecture, world-class museums, and charming cafés created lasting memories of authentic French culture.',
-    coverImage: '/placeholder.svg',
-    rating: 5,
-    companions: ['Sarah', 'Mike'],
-    highlights: ['Eiffel Tower at sunset', 'Louvre Museum', 'Versailles Palace', 'Seine River cruise']
-  },
-  {
-    id: '2',
-    name: 'Tokyo Adventure',
-    locations: ['Tokyo, Japan', 'Kyoto, Japan'],
-    startDate: '2025-07-10',
-    endDate: '2025-07-25',
-    summary: 'Exploring the perfect blend of tradition and modernity.',
-    aiSummary: 'This 15-day exploration of Tokyo and Kyoto showcased the incredible contrast between Japan\'s ultra-modern capital and its ancient cultural heart. The journey included visits to bustling districts like Shibuya and Harajuku, traditional temples in Kyoto, and the serene beauty of Japanese gardens. The experience was enriched by authentic cuisine, from street food to kaiseki dining, and the warm hospitality of the Japanese people. The trip perfectly captured the essence of modern Japan while honoring its deep cultural traditions.',
-    coverImage: '/placeholder.svg',
-    rating: 5,
-    companions: ['Alex'],
-    highlights: ['Shibuya Crossing', 'Fushimi Inari Shrine', 'Traditional tea ceremony', 'Tsukiji Fish Market']
-  }
-];
+// start with empty; will be loaded from backend
+const initialJournals: any[] = [];
 
 interface Journal {
   id: string;
@@ -54,18 +28,84 @@ const Journals = () => {
   const [journals, setJournals] = useState<Journal[]>(initialJournals);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingJournal, setEditingJournal] = useState<Journal | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleCreateJournal = (journalData: Omit<Journal, 'id'>) => {
-    const newJournal: Journal = {
-      ...journalData,
-      id: Math.random().toString(36).substr(2, 9)
-    };
-    setJournals([...journals, newJournal]);
-    setIsCreateDialogOpen(false);
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/journals`);
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!mounted) return;
+        const mapped = (json.journals || []).map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          locations: r.locations || [],
+          startDate: r.start_date || '',
+          endDate: r.end_date || '',
+          summary: r.summary || '',
+          aiSummary: r.ai_summary || undefined,
+          coverImage: r.cover_image || '/placeholder.svg',
+          rating: r.rating || undefined,
+          companions: r.companions || [],
+          highlights: r.highlights || [],
+        }));
+        setJournals(mapped);
+      } catch (err) {
+        console.error('Failed to load journals', err);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  const handleCreateJournal = async (journalData: Omit<Journal, 'id'>) => {
+    setIsProcessing(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/journals`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(journalData),
+      });
+      if (!res.ok) {
+        console.error('Failed to create journal', await res.text());
+        return;
+      }
+      const json = await res.json();
+      const r = json.journal;
+      const mapped: Journal = {
+        id: r.id,
+        name: r.name,
+        locations: r.locations || [],
+        startDate: r.start_date || '',
+        endDate: r.end_date || '',
+        summary: r.summary || '',
+        aiSummary: r.ai_summary || undefined,
+        coverImage: r.cover_image || '/placeholder.svg',
+        rating: r.rating || undefined,
+        companions: r.companions || [],
+        highlights: r.highlights || [],
+      };
+      setJournals((s) => [...s, mapped]);
+      setIsCreateDialogOpen(false);
+    } catch (err) {
+      console.error('Error creating journal', err);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  const handleDeleteJournal = (id: string) => {
-    setJournals(journals.filter(journal => journal.id !== id));
+  const handleDeleteJournal = async (id: string) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/journals/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        console.error('Failed to delete journal', await res.text());
+        return;
+      }
+      setJournals(journals.filter(journal => journal.id !== id));
+    } catch (err) {
+      console.error('Error deleting journal', err);
+    }
   };
 
   const handleEditJournal = (journal: Journal) => {
@@ -73,20 +113,51 @@ const Journals = () => {
     setIsCreateDialogOpen(true);
   };
 
-  const handleUpdateJournal = (journalData: Omit<Journal, 'id'>) => {
-    if (editingJournal) {
-      setJournals(journals.map(journal => 
-        journal.id === editingJournal.id 
-          ? { ...journalData, id: editingJournal.id }
-          : journal
-      ));
+  const handleUpdateJournal = async (journalData: Omit<Journal, 'id'>) => {
+    if (!editingJournal) return;
+    setIsProcessing(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/journals/${editingJournal.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...journalData, regenerateAI: true }),
+      });
+      if (!res.ok) {
+        console.error('Failed to update journal', await res.text());
+        return;
+      }
+      const json = await res.json();
+      const r = json.journal;
+      const mapped: Journal = {
+        id: r.id,
+        name: r.name,
+        locations: r.locations || [],
+        startDate: r.start_date || '',
+        endDate: r.end_date || '',
+        summary: r.summary || '',
+        aiSummary: r.ai_summary || undefined,
+        coverImage: r.cover_image || '/placeholder.svg',
+        rating: r.rating || undefined,
+        companions: r.companions || [],
+        highlights: r.highlights || [],
+      };
+      setJournals(journals.map(j => j.id === mapped.id ? mapped : j));
       setEditingJournal(null);
       setIsCreateDialogOpen(false);
+    } catch (err) {
+      console.error('Error updating journal', err);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   return (
     <>
+      {isProcessing && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 px-6 py-3 rounded shadow">Generating AI summary…</div>
+        </div>
+      )}
       <Header />
       <div className="container mx-auto px-4 py-24">
         <div className="flex justify-between items-center mb-8">

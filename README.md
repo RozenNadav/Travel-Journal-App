@@ -60,6 +60,19 @@ Make sure PostgreSQL is running on port 5432 with the database `travel_journal`.
 
 Copy `env.example` to `.env` and update the values as needed.
 
+### OpenAI API Key
+
+- To enable AI-generated summaries, set the `OPENAI_API_KEY` in `backend/.env` or your environment. Do NOT commit your real API key into the repository. Use `backend/.env.example` as a template.
+
+Example (bash):
+
+```bash
+cd backend
+cp .env.example .env
+# edit .env to add OPENAI_API_KEY
+export OPENAI_API_KEY="sk-..."
+```
+
 ## Docker Commands
 
 - **Development mode:** `docker-compose --profile development up --build`
@@ -85,6 +98,11 @@ Copy `env.example` to `.env` and update the values as needed.
 - `GET /` - Health check
 - `POST /auth/register` - User registration
 - `POST /auth/login` - User login
+ - `POST /api/summarize` - Ad-hoc summary generation using OpenAI (for testing)
+ - `GET /api/journals` - List saved journals
+ - `POST /api/journals` - Create a journal (generates AI summary and persists)
+ - `PUT /api/journals/:id` - Update a journal (set `regenerateAI: true` to regenerate ai summary)
+ - `DELETE /api/journals/:id` - Delete a journal
 
 ## Technologies
 
